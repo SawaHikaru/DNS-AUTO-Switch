@@ -114,6 +114,7 @@ else
   OLD_PRESENT_IP=`cat $PRESENT_IP_FILE`
 fi
 
+CHECK=$(curl -s "$PING_API/$OLD_PRESENT_IP/22")
 if [ "$(echo $CHECK | grep "\"status\":true")" != "" ]; then
   echo "No service failure found. No DNS record update required. "
   exit 0
@@ -129,6 +130,7 @@ else
   OLD_PRESENT_IP=`cat $PRESENT_IP_FILE`
 fi
 
+CHECK=$(curl -s "$PING_API/$OLD_PRESENT_IP/22")
 if [ "$(echo $CHECK | grep "\"status\":true")" != "" ]; then
   echo "No service failure found. No DNS record update required. "
   exit 0
@@ -139,6 +141,22 @@ else
   -H "X-Auth-Key: $CFKEY" \
   -H "Content-Type: application/json" \
   --data "{\"id\":\"$CFZONE_ID\",\"type\":\"$CFRECORD_TYPE\",\"name\":\"$CFRECORD_NAME\",\"content\":\"$FAIL_IP3\", \"ttl\":$CFTTL}")
+  curl -s "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage?chat_id=$TG_CHATID&text=Service failure found. Updating DNS record $CFZONE_NAME to $FAIL_IP3"
+  echo $FAIL_IP3 > $PRESENT_IP_FILE
+  OLD_PRESENT_IP=`cat $PRESENT_IP_FILE`
+fi
+
+CHECK=$(curl -s "$PING_API/$OLD_PRESENT_IP/22")
+if [ "$(echo $CHECK | grep "\"status\":true")" != "" ]; then
+  echo "No service failure found. No DNS record update required. "
+  exit 0
+else
+  echo "Service failure found. Updating DNS to $FAIL_IP4"
+  RESPONSE=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/zones/$CFZONE_ID/dns_records/$CFRECORD_ID" \
+  -H "X-Auth-Email: $CFUSER" \
+  -H "X-Auth-Key: $CFKEY" \
+  -H "Content-Type: application/json" \
+  --data "{\"id\":\"$CFZONE_ID\",\"type\":\"$CFRECORD_TYPE\",\"name\":\"$CFRECORD_NAME\",\"content\":\"$FAIL_IP4\", \"ttl\":$CFTTL}")
   curl -s "https://api.telegram.org/bot$TG_BOT_TOKEN/sendMessage?chat_id=$TG_CHATID&text=Service failure found. Updating DNS record $CFZONE_NAME to $FAIL_IP3"
   echo $FAIL_IP3 > $PRESENT_IP_FILE
   OLD_PRESENT_IP=`cat $PRESENT_IP_FILE`
